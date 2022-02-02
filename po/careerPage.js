@@ -21,11 +21,16 @@ class CareerPage {
         this.skillsFilter = element(by.css('.multi-select-dropdown'));
         this.getSkillsCheckbox = skill => this.skillsFilter.element (by.css(`[data-value="${skill}"] ~ span`));
         this.skillsCounter = this.skillsSelection.element (by.css('.counter'));
+        this.selectedSkillTag = element (by.css('.selected-items'))
 
         this.searchResult = element (by.css('.search-result__list'));
         this.jobLocation = element (by.css('.search-result__location'));
-        this.jobViewAndApplyButton = element (by.css('.search-result__item-apply'))
+        this.jobPosition = element (by.css('.search-result__item-name'))
+        this.jobViewAndApplyButton = element (by.css('.search-result__item-apply'));
 
+        this.vacancyDescription = element (by.css('.section__content'));
+        this.vacancyLocation = element (by.css('.form-component__location'));
+        this.vacancyPosition = element (by.css('header h1'));
     }
 
     load(){
@@ -36,22 +41,24 @@ class CareerPage {
     async acceptCookie(){
         return await browser.isElementPresent(this.cookieAccept)
         .then(isPresent => {
-            if (isPresent) {               
+            if (isPresent) {
                 this.cookieAccept.click();
             }
-        });         
+        });
     };
 
-   selectCityInCountry(country, city) {
+    async selectCityInCountry (country, city) {
         this.locationSelection.click();
-        // need to add check if the location has been already selected
-        browser.sleep(1000)
+        browser.sleep(1000);
         browser.wait(ec.visibilityOf(this.locationFilter), GLOBAL_TIMEOUT);
-        browser.wait(ec.elementToBeClickable(this.countryOfLocation(country)), GLOBAL_TIMEOUT);
-        this.countryOfLocation(country).click();
+        
+        const countryClasses = await this.countryOfLocation(country).getAttribute('class');
+        const splittedClasses = countryClasses.split(' ');
+        if (splittedClasses.indexOf('dropdown-cities') === -1) {
+            browser.actions().mouseMove(this.countryOfLocation(country)).click().perform();
+        }
 
-        browser.sleep(1000)
-        browser.wait(ec.elementToBeClickable(this.cityOfLocation(city)), GLOBAL_TIMEOUT);
+        browser.wait(ec.elementToBeClickable(this.cityOfLocation(city)),GLOBAL_TIMEOUT);
         return this.cityOfLocation(city).click();
     };
     
@@ -59,26 +66,49 @@ class CareerPage {
         return await this.selectedLocation.getText();
     };
 
-    selectSkill(skill) {
+    async selectSkill(skill) {
         this.skillsSelection.click();
-        browser.wait(ec.visibilityOf(this.skillsFilter), 5000);
-        return this.getSkillsCheckbox(skill).click();
+        browser.wait(ec.visibilityOf(this.skillsFilter), GLOBAL_TIMEOUT);
+        return await this.getSkillsCheckbox(skill).click();
     }
 
     async getSelectedSkill() {
         return await this.skillsCounter.getText();
     }
 
-    submitSearch(country, city, skill) {
-        this.selectCityInCountry(country, city);
+    async getSelectedSkillTag() {
+        return await this.selectedSkillTag.getText();
+    } 
+
+    async submitSearch(country, city, skill) {
+        await this.selectCityInCountry(country, city);
         this.selectSkill(skill);
         return this.jobSearchButton.click();
     }
 
     async getLocationOfJob() {
+        browser.wait(ec.visibilityOf(this.searchResult), GLOBAL_TIMEOUT);
         return await this.jobLocation.getText();
     }
-    
+
+    async getPositionOfJob() {
+        browser.wait(ec.visibilityOf(this.searchResult), GLOBAL_TIMEOUT);
+        return await this.jobPosition.getText();
+    }
+
+    async openVacancyDescription (country, city, skill) {
+        await this.submitSearch (country, city, skill)
+        browser.wait(ec.visibilityOf(this.jobViewAndApplyButton), GLOBAL_TIMEOUT);
+        return this.jobViewAndApplyButton.click();
+    }
+
+    async getLocationOfVacancy() {
+        return await this.vacancyLocation.getText();
+    }
+
+    async getPositionOfVacancy() {
+        return await this.vacancyPosition.getText();
+    }
 }
 
 module.exports = CareerPage;
